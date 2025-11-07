@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>英単語クイズ</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Meiryo', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .stats {
+            display: flex;
+            gap: 15px;
+            font-size: 14px;
+        }
+        .stat-item {
+            background: #f0f0f0;
+            padding: 8px 15px;
+            border-radius: 8px;
+        }
+        .question-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+        .next-box {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .choices {
+            display: grid;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .choice-btn {
+            padding: 15px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            background: white;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .choice-btn:hover:not(:disabled) {
+            background: #f0f0f0;
+            transform: translateY(-2px);
+        }
+        .choice-btn:disabled { cursor: not-allowed; opacity: 0.6; }
+        .choice-btn.correct { background: #d4edda !important; border-color: #28a745; }
+        .choice-btn.incorrect { background: #f8d7da !important; border-color: #dc3545; }
+        .result-text {
+            text-align: center;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        .result-text.correct { background: #d4edda; color: #155724; }
+        .result-text.incorrect { background: #f8d7da; color: #721c24; }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .btn:hover { transform: translateY(-2px); }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .progress-section {
+            margin-bottom: 20px;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.3s;
+        }
+        .combo-timer {
+            height: 8px;
+            background: #28a745;
+            transition: width 0.1s linear;
+        }
+        .mistakes {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .mistakes h3 {
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        .mistake-item {
+            padding: 5px 0;
+            border-bottom: 1px solid #ffc107;
+            font-size: 14px;
+        }
+        input[type="number"] {
+            padding: 8px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            width: 80px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 英単語クイズ</h1>
+            <div class="stats">
+                <div class="stat-item">正解数: <span id="correct">0</span></div>
+                <div class="stat-item">COMBO: <span id="combo">0</span></div>
+                <div class="stat-item">MAX: <span id="maxCombo">0</span></div>
+                <div class="stat-item">Lv.<span id="level">1</span></div>
+            </div>
+        </div>
+
+        <div class="progress-section">
+            <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 3px;">
+                <span>経験値</span>
+                <span><span id="exp">0</span>/<span id="expNext">10</span></span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="expBar" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <div class="next-box" id="nextBox">次の問題: ...</div>
+        <div class="question-box" id="questionBox">問題: ...</div>
+        
+        <div id="resultText"></div>
+        
+        <div class="progress-bar" style="height: 8px; margin-bottom: 20px;">
+            <div class="combo-timer" id="comboTimer" style="width: 100%"></div>
+        </div>
+
+        <div class="choices" id="choices"></div>
+
+        <div class="controls">
+            <button class="btn btn-primary" id="modeBtn">順番/ランダム</button>
+            <input type="number" id="skipNum" value="10" min="1" max="100">
+            <button class="btn btn-secondary" id="skipBtn">スキップ</button>
+            <button class="btn btn-secondary" id="reviewBtn">復習: OFF</button>
+            <button class="btn btn-secondary" id="reverseBtn">英⇔日</button>
+        </div>
+
+        <div class="mistakes">
+            <h3>❌ ミスした単語</h3>
+            <div id="mistakes"></div>
+        </div>
+    </div>
+
+    <script>
+        // サンプル単語データ（words.txtの代わり）
+        const wordsData = [
+            ['リンゴ', 'apple'], ['犬', 'dog'], ['猫', 'cat'], ['本', 'book'],
+            ['水', 'water'], ['食べる', 'eat'], ['走る', 'run'], ['見る', 'see'],
+            ['聞く', 'hear'], ['話す', 'speak'], ['書く', 'write'], ['読む', 'read'],
+            ['学校', 'school'], ['先生', 'teacher'], ['学生', 'student'], ['友達', 'friend'],
+            ['家', 'house'], ['車', 'car'], ['電車', 'train'], ['飛行機', 'airplane']
+        ];
+
+        let words = wordsData.map(([jp, en]) => ({jp, en}));
+        let currentIndex = 0;
+        let sequentialMode = false;
+        let reverseMode = false;
+        let persistentReview = false;
+        let inReviewPhase = false;
+        let reviewProgress = 0;
+        let reviewBlockStart = -1;
+        let resumeIndex = 0;
+
+        let correctCount = 0;
+        let combo = 0;
+        let maxCombo = 0;
+        let level = 1;
+        let exp = 0;
+        let expToNext = 10;
+
+        let comboTimeLimit = 3500;
+        let comboRemaining = 0;
+        let comboInterval = null;
+
+        let currentWord, currentAnswer, nextWord, nextAnswer;
+        let previousWord = '';
+
+        function init() {
+            generateQuestion();
+            generateNextQuestion();
+            updateDisplay();
+            setupButtons();
+        }
+
+        function generateQuestion() {
+            if (sequentialMode) return;
+            let idx;
+            do {
+                idx = Math.floor(Math.random() * words.length);
+            } while (words.length > 1 && getQuestion(idx) === previousWord);
+            
+            currentWord = getQuestion(idx);
+            currentAnswer = getAnswer(idx);
+            previousWord = currentWord;
+        }
+
+        function generateNextQuestion() {
+            if (sequentialMode) return;
+            let idx = Math.floor(Math.random() * words.length);
+            nextWord = getQuestion(idx);
+            nextAnswer = getAnswer(idx);
+        }
+
+        function getQuestion(idx) {
+            return reverseMode ? words[idx].en : words[idx].jp;
+        }
+
+        function getAnswer(idx) {
+            return reverseMode ? words[idx].jp : words[idx].en;
+        }
+
+        function showByIndex(showIdx, nextIdx) {
+            if (showIdx >= 0 && showIdx < words.length) {
+                currentWord = getQuestion(showIdx);
+                currentAnswer = getAnswer(showIdx);
+            }
+            if (nextIdx >= 0 && nextIdx < words.length) {
+                nextWord = getQuestion(nextIdx);
+            }
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            document.getElementById('questionBox').textContent = 
+                sequentialMode ? `問題 (${currentIndex + 1}番目): ${currentWord}` : `問題: ${currentWord}`;
+            document.getElementById('nextBox').textContent = 
+                sequentialMode ? `次の問題 (${currentIndex + 2}番目): ${nextWord}` : `次の問題: ${nextWord}`;
+            
+            generateChoices();
+            
+            document.getElementById('correct').textContent = correctCount;
+            document.getElementById('combo').textContent = combo;
+            document.getElementById('maxCombo').textContent = maxCombo;
+            document.getElementById('level').textContent = level;
+            document.getElementById('exp').textContent = exp;
+            document.getElementById('expNext').textContent = expToNext;
+            document.getElementById('expBar').style.width = `${(exp / expToNext) * 100}%`;
+        }
+
+        function generateChoices() {
+            const answers = reverseMode 
+                ? words.map(w => w.jp) 
+                : words.map(w => w.en);
+            
+            let choices = [currentAnswer];
+            while (choices.length < 4 && answers.length > 0) {
+                const ans = answers[Math.floor(Math.random() * answers.length)];
+                if (!choices.includes(ans)) choices.push(ans);
+            }
+            
+            choices.sort(() => Math.random() - 0.5);
+            
+            const container = document.getElementById('choices');
+            container.innerHTML = '';
+            choices.forEach(choice => {
+                const btn = document.createElement('button');
+                btn.className = 'choice-btn';
+                btn.textContent = choice;
+                btn.onclick = () => checkAnswer(btn, choice);
+                container.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(btn, choice) {
+            const buttons = document.querySelectorAll('.choice-btn');
+            buttons.forEach(b => b.disabled = true);
+            
+            const isCorrect = choice === currentAnswer;
+            const resultDiv = document.getElementById('resultText');
+            
+            if (isCorrect) {
+                btn.classList.add('correct');
+                resultDiv.textContent = '正解！';
+                resultDiv.className = 'result-text correct';
+                correctCount++;
+                
+                combo++;
+                if (combo > maxCombo) maxCombo = combo;
+                
+                exp++;
+                if (exp >= expToNext) {
+                    exp -= expToNext;
+                    level++;
+                    expToNext += 5;
+                }
+                
+                startComboTimer();
+            } else {
+                btn.classList.add('incorrect');
+                buttons.forEach(b => {
+                    if (b.textContent === currentAnswer) b.classList.add('correct');
+                });
+                resultDiv.textContent = `不正解... 正解は: ${currentAnswer}`;
+                resultDiv.className = 'result-text incorrect';
+                
+                addMistake();
+                combo = 0;
+                stopComboTimer();
+            }
+            
+            updateDisplay();
+            setTimeout(nextQuestion, 800);
+        }
+
+        function nextQuestion() {
+            document.getElementById('resultText').textContent = '';
+            const buttons = document.querySelectorAll('.choice-btn');
+            buttons.forEach(b => {
+                b.disabled = false;
+                b.className = 'choice-btn';
+            });
+            
+            if (sequentialMode) {
+                if (persistentReview && inReviewPhase) {
+                    let showIdx = reviewBlockStart + reviewProgress;
+                    reviewProgress++;
+                    
+                    if (reviewProgress < 10) {
+                        showByIndex(showIdx, reviewBlockStart + reviewProgress);
+                    } else {
+                        inReviewPhase = false;
+                        currentIndex = resumeIndex;
+                        showByIndex(currentIndex, currentIndex + 1);
+                    }
+                } else {
+                    currentIndex++;
+                    
+                    if (persistentReview && (currentIndex % 10 === 0) && (currentIndex >= 20)) {
+                        reviewBlockStart = currentIndex - 20;
+                        reviewProgress = 0;
+                        resumeIndex = currentIndex;
+                        inReviewPhase = true;
+                        showByIndex(currentIndex - 1, reviewBlockStart);
+                    } else {
+                        showByIndex(currentIndex, currentIndex + 1);
+                    }
+                }
+            } else {
+                currentWord = nextWord;
+                currentAnswer = nextAnswer;
+                generateNextQuestion();
+                updateDisplay();
+            }
+        }
+
+        function addMistake() {
+            const div = document.createElement('div');
+            div.className = 'mistake-item';
+            div.textContent = reverseMode 
+                ? `${currentAnswer} : ${currentWord}` 
+                : `${currentWord} : ${currentAnswer}`;
+            document.getElementById('mistakes').insertBefore(div, document.getElementById('mistakes').firstChild);
+        }
+
+        function startComboTimer() {
+            stopComboTimer();
+            comboRemaining = comboTimeLimit;
+            document.getElementById('comboTimer').style.width = '100%';
+            
+            comboInterval = setInterval(() => {
+                comboRemaining -= 100;
+                if (comboRemaining <= 0) {
+                    combo = 0;
+                    stopComboTimer();
+                    updateDisplay();
+                } else {
+                    document.getElementById('comboTimer').style.width = 
+                        `${(comboRemaining / comboTimeLimit) * 100}%`;
+                }
+            }, 100);
+        }
+
+        function stopComboTimer() {
+            if (comboInterval) {
+                clearInterval(comboInterval);
+                comboInterval = null;
+            }
+            document.getElementById('comboTimer').style.width = '0%';
+        }
+
+        function setupButtons() {
+            document.getElementById('modeBtn').onclick = () => {
+                sequentialMode = !sequentialMode;
+                if (sequentialMode) {
+                    currentIndex = 0;
+                    inReviewPhase = false;
+                    showByIndex(0, 1);
+                } else {
+                    generateQuestion();
+                    generateNextQuestion();
+                    updateDisplay();
+                }
+            };
+
+            document.getElementById('skipBtn').onclick = () => {
+                if (!sequentialMode) return alert('順番モードでのみ使用できます');
+                const skipCount = parseInt(document.getElementById('skipNum').value);
+                currentIndex += skipCount;
+                showByIndex(currentIndex, currentIndex + 1);
+            };
+
+            document.getElementById('reviewBtn').onclick = function() {
+                persistentReview = !persistentReview;
+                this.textContent = persistentReview ? '復習: ON' : '復習: OFF';
+            };
+
+            document.getElementById('reverseBtn').onclick = () => {
+                reverseMode = !reverseMode;
+                if (sequentialMode) {
+                    showByIndex(currentIndex, currentIndex + 1);
+                } else {
+                    generateQuestion();
+                    generateNextQuestion();
+                    updateDisplay();
+                }
+            };
+        }
+
+        init();
+    </script>
+</body>
+</html>
