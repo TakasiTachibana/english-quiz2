@@ -838,6 +838,54 @@
                 }
             };
 
+function resetAll() {
+    // タイマー停止
+    stopComboTimer();
+
+    // 状態を初期値へ戻す
+    sequentialMode = false;
+    reverseMode = false;
+    persistentReview = false;
+    inReviewPhase = false;
+    reviewProgress = 0;
+    reviewBlockStart = -1;
+    resumeIndex = 0;
+    previousWord = '';
+
+    correctCount = 0;
+    combo = 0;
+    maxCombo = 0;
+    level = 1;
+    exp = 0;
+    expToNext = 10;
+
+    // currentIndex を先頭に戻して新しい問題を用意
+    currentIndex = 0;
+    generateQuestion();
+    generateNextQuestion();
+
+    // ミス一覧をクリア
+    const mistakesContainer = document.getElementById('mistakes');
+    mistakesContainer.innerHTML = '';
+
+    // 結果テキストを空に
+    const resultDiv = document.getElementById('resultText');
+    resultDiv.textContent = '';
+    resultDiv.className = '';
+
+    // UI更新
+    updateDisplay();
+}
+
+document.getElementById('clearMistakesBtn').onclick = function() {
+    // 確認ダイアログ（不要なら削除）
+    if (!confirm('本当に全てリセットしますか？（スコア・コンボ・ミス一覧が消えます）')) return;
+
+    resetAll();
+
+    // もし localStorage に状態を保存しているならここで消す（あれば）
+    // localStorage.removeItem('quizState');
+};
             document.getElementById('skipBtn').onclick = () => {
                 if (!sequentialMode) return alert('順番モードでのみ使用できます');
                 const skipCount = parseInt(document.getElementById('skipNum').value);
@@ -861,6 +909,7 @@
                 }
             };
         }
+
 
         init();
     </script>
